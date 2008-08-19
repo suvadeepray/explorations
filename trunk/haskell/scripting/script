@@ -1,0 +1,4 @@
+:l Quick.hs
+:m + Test.QuickCheck
+putStr "prop_This: "
+quickCheck prop_This
