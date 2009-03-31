@@ -1,31 +1,55 @@
+
 -module(ex8_1).
--export([start/2,start_process_server/0,testfun/0]).
+-export([start/2,start_process_server/0,testfun/0,stop_process_server/0]).
 
 
 start(AnAtom,Fun) ->
-    ex8_1 ! {self(),AnAtom,Fun}.
-
-start_process_server()->
-    case whereis(ex8_1) of
-        undefined -> register(ex8_1,spawn(fun()->process_server() end));
-	_ -> whereis(ex8_1)
-    
+    ex8_1 ! {eval, self(),AnAtom,Fun},
+    receive
+	{result,Result}->
+	    Result
     end.
 
+stop_process_server()->
+    ex8_1 ! stop.
 
-create(AnAtom,Fun) when is_pid(AnAtom)->
-    {error,io:format("Process for atom ~p already registered.~n",[AnAtom])};
-create(AnAtom,Fun)->
+start_process_server()->
+    register(ex8_1,spawn(fun()->process_server() end)).
+
+
+create(AnAtom,Fun) ->
     register(AnAtom,spawn(fun()->Fun()end)).
-
 
 process_server()->
     receive
-	{From,AnAtom,Fun}->
-	    From ! create(AnAtom,Fun),
+	{eval, From,AnAtom,Fun}->
+	    Parent = self(),
+	    spawn(fun()->
+			  From ! {result, create(AnAtom,Fun)},
+			  Parent ! free
+		  end),
+		  busy();
+	stop ->
+	    stop
+    end.
+
+
+busy()->
+    receive
+	{eval,From,AnAtom,Fun}->
+	    exit(From, eNotSim);
+	free ->
 	    process_server()
     end.
 
 
 testfun()->
-    testfun().
+    receive
+	{From,X}->
+	    From ! {self(), X},
+	    testfun();
+	stop ->
+	    stop
+    end.
+
+
