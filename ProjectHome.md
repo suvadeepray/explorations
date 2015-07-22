@@ -1,0 +1,1 @@
+Very often I keep playing with various programming languages. This is repository for such experiments
